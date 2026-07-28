@@ -3,5 +3,6 @@
         "c:\\Users\\amansahota\\.vscode\\extensions\\ms-security.ms-sentinel-0.1.0\\python",
         "c:\\Users\\amansahota\\.vscode\\extensions\\ms-security.ms-sentinel-2.1.0\\python",
         "c:\\Users\\amansahota\\.vscode\\extensions\\ms-security.ms-sentinel-2.3.0\\python"
-    ]
+    ],
+    "postman.settings.dotenv-detection-notification-visibility": false
 }
