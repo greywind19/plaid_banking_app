@@ -1,0 +1,273 @@
+:root {
+  --bg: #0f1220;
+  --panel: #1a1e33;
+  --panel-2: #232842;
+  --text: #e7e9f3;
+  --muted: #9aa0bf;
+  --accent: #6ea8fe;
+  --green: #4ade80;
+  --red: #f87171;
+  --border: #2c3253;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+.app {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+header h1 {
+  font-size: 24px;
+  margin: 0;
+}
+
+.badge {
+  background: var(--panel-2);
+  color: var(--muted);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+button {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+button.primary {
+  background: var(--accent);
+  color: #0b1020;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.muted {
+  color: var(--muted);
+}
+.small {
+  font-size: 12px;
+}
+.right {
+  text-align: right;
+}
+
+.error {
+  background: #3a1d24;
+  border: 1px solid var(--red);
+  color: #fecaca;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.empty {
+  background: var(--panel);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+}
+
+section {
+  margin-bottom: 24px;
+}
+
+section h2 {
+  font-size: 16px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+
+.networth {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.nw-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nw-card span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.nw-card strong {
+  font-size: 24px;
+}
+.nw-card.asset strong {
+  color: var(--green);
+}
+.nw-card.liability strong {
+  color: var(--red);
+}
+.nw-card.total {
+  border-color: var(--accent);
+}
+
+.accounts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.account {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  padding: 14px;
+}
+.account.credit {
+  border-left-color: var(--red);
+}
+.account.depository {
+  border-left-color: var(--green);
+}
+
+.account-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.mask {
+  color: var(--muted);
+  font-size: 12px;
+}
+.account-type {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: capitalize;
+  margin: 4px 0 8px;
+}
+.account-bal {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 800px) {
+  .grid,
+  .networth {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bars {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.bars li {
+  display: grid;
+  grid-template-columns: 130px 1fr 80px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.bar-label {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bar-track {
+  background: var(--panel-2);
+  border-radius: 6px;
+  height: 12px;
+  overflow: hidden;
+}
+.bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.bar-value {
+  text-align: right;
+}
+
+table.txns {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.txns th {
+  text-align: left;
+  color: var(--muted);
+  font-weight: 500;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.txns td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--panel-2);
+}
+.txns .outflow {
+  color: var(--red);
+}
+.txns .inflow {
+  color: var(--green);
+}
+.pill {
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-left: 6px;
+}
