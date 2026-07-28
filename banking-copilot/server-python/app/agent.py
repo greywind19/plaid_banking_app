@@ -54,7 +54,9 @@ def run_agent(history: list[dict]) -> tuple[str, list[dict]]:
             messages=messages,
             tools=TOOL_SPECS,
             tool_choice="auto",
-            temperature=0.2,
+            # No temperature: reasoning models (gpt-5 / o-series) only accept the
+            # default, and tool selection doesn't benefit from tuning it. Keeping
+            # it unset makes this work across classic and reasoning deployments.
         )
         msg = resp.choices[0].message
 
