@@ -4,3 +4,4 @@ plaid-python==29.0.0
 python-dotenv==1.0.1
 mcp==1.2.0
 openai==1.109.1
+azure-identity==1.19.0
