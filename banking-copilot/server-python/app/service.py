@@ -10,6 +10,9 @@ import plaid
 from plaid.model.sandbox_public_token_create_request import (
     SandboxPublicTokenCreateRequest,
 )
+from plaid.model.sandbox_public_token_create_request_options import (
+    SandboxPublicTokenCreateRequestOptions,
+)
 from plaid.model.item_public_token_exchange_request import (
     ItemPublicTokenExchangeRequest,
 )
@@ -21,19 +24,30 @@ from plaid.model.products import Products
 from .plaid_client import client, SANDBOX_INSTITUTION_ID
 from .normalize import normalize_account, normalize_transaction
 from .token_store import token_store
+from .seed_data import get_seed_password_json
 
 
 def _round2(n: float) -> float:
     return round(n, 2)
 
 
-def connect_sandbox() -> dict:
-    """Bootstrap a Plaid sandbox Item and sync its transactions."""
+def connect_sandbox(use_seed: bool = True) -> dict:
+    """Bootstrap a Plaid sandbox Item and sync its transactions.
+
+    When use_seed is True we hand Plaid our custom-user blueprint so the Sandbox
+    builds richer, coherent accounts/transactions. The fetch path is identical.
+    """
     # 1. Create a sandbox public_token for the test institution.
-    pt_req = SandboxPublicTokenCreateRequest(
+    pt_kwargs = dict(
         institution_id=SANDBOX_INSTITUTION_ID,
         initial_products=[Products("transactions")],
     )
+    if use_seed:
+        pt_kwargs["options"] = SandboxPublicTokenCreateRequestOptions(
+            override_username="user_custom",
+            override_password=get_seed_password_json(),
+        )
+    pt_req = SandboxPublicTokenCreateRequest(**pt_kwargs)
     pt_resp = client.sandbox_public_token_create(pt_req)
 
     # 2. Exchange it for a durable access_token.
