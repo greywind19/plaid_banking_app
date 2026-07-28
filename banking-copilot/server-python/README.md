@@ -12,8 +12,24 @@ app/mcp_server.py    MCP wrapper (stdio)      ← the agent calls this later
 app/service.py       THE BRAINS: accounts, transactions, spending, net worth
 app/normalize.py     Plaid objects → clean camelCase dicts (sign + transfers)
 app/plaid_client.py  Plaid SDK client (reads .env)
+app/seed_data.py     custom-user blueprint → richer, realistic sandbox data
 app/token_store.py   in-memory access_token + cached transactions
 ```
+
+## Seeded sandbox data
+
+`connect_sandbox()` hands Plaid a [custom-user](https://plaid.com/docs/sandbox/user-custom/)
+blueprint (`app/seed_data.py`) so the Sandbox builds three coherent accounts —
+checking, savings, and a credit card — with a full month of realistic activity:
+biweekly salary, rent + utilities, groceries/dining/subscriptions, a
+checking→savings transfer, and a monthly card payment. The data lives **inside
+Plaid**; we still fetch it through the same `/transactions/sync` path.
+
+> Note: Plaid's Sandbox only surfaces custom transactions dated within the last
+> ~30 days of Item creation (verified by testing; `days_requested` does not
+> extend this for override data), so the seed models one rich ~29-day cycle
+> rather than several months. Pass `use_seed=False` to `connect_sandbox()` for
+> Plaid's default random data instead.
 
 ## Setup
 
