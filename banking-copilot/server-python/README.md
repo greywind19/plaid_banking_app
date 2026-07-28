@@ -14,6 +14,10 @@ app/normalize.py     Plaid objects → clean camelCase dicts (sign + transfers)
 app/plaid_client.py  Plaid SDK client (reads .env)
 app/seed_data.py     custom-user blueprint → richer, realistic sandbox data
 app/token_store.py   in-memory access_token + cached transactions
+app/llm_client.py    LLM client factory (Foundry / OpenAI, chosen by env)
+app/agent_tools.py   tool schemas + handlers (same tools as MCP) for the agent
+app/agent.py         the LLM tool-calling loop (the copilot brain)
+app/chat.py          terminal chat REPL to talk to the agent
 ```
 
 ## Seeded sandbox data
@@ -62,6 +66,26 @@ cd banking-copilot\server-python
 
 Tools (all **read-only**): `connect_sandbox`, `list_accounts`, `get_balances`,
 `get_transactions`, `spending_by_category`, `net_worth`.
+
+## Chat with the agent (the copilot brain)
+
+The agent is an LLM that answers finance questions by calling the tools above
+and explaining the results. Its model is chosen by `LLM_PROVIDER` in `.env`:
+`foundry` (Azure AI Foundry / Azure OpenAI, default) or `openai`.
+
+1. Deploy a model in [ai.azure.com](https://ai.azure.com) and copy its endpoint,
+   key, deployment name, and API version into `.env` (see `.env.example`).
+2. Run the terminal chat:
+
+```powershell
+cd banking-copilot\server-python
+.\.venv\Scripts\python.exe -m app.chat
+```
+
+It links the seeded sandbox automatically, then you can ask things like
+"what did I spend on this month?", "how much on dining?", or "what's my net
+worth?". The model never sees Plaid credentials — only the JSON our read-only
+tools return.
 
 ## Endpoints
 
