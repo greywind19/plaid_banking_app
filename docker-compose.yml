@@ -1,0 +1,52 @@
+# One command to run the whole stack: `docker compose up --build`
+# Services: postgres (data) → server (FastAPI) → ui (nginx serving React).
+name: banking-copilot
+
+services:
+  # ---- Database -----------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: banking
+      POSTGRES_PASSWORD: banking
+      POSTGRES_DB: banking
+    volumes:
+      # Named volume = data survives `docker compose down` (but not `down -v`).
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # server waits for this to pass before starting (see depends_on below).
+      test: ["CMD-SHELL", "pg_isready -U banking -d banking"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ---- API server ---------------------------------------------------------
+  server:
+    build: ./server-python
+    env_file:
+      # Brings in Plaid creds + Azure Foundry/OpenAI endpoints from your local
+      # .env (gitignored). Copy .env.example → .env first if you haven't.
+      - ./server-python/.env
+    environment:
+      # Override: point the app at the postgres SERVICE (not localhost). This is
+      # what flips token_store into its durable PostgresTokenStore backend.
+      DATABASE_URL: postgresql+psycopg://banking:banking@postgres:5432/banking
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      # Exposed for direct API testing (curl :8787/api/health). The UI does not
+      # need this — it reaches the server over the internal compose network.
+      - "8787:8787"
+
+  # ---- Web UI (nginx) -----------------------------------------------------
+  ui:
+    build: ./web
+    depends_on:
+      - server
+    ports:
+      # Open the app at http://localhost:8080
+      - "8080:80"
+
+volumes:
+  pgdata:

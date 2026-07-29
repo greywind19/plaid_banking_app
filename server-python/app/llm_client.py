@@ -80,7 +80,18 @@ def get_llm():
             # fetches a token from the right directory. On Azure (managed
             # identity) leave AZURE_TENANT_ID unset — MI is single-tenant.
             tenant = os.getenv("AZURE_TENANT_ID")
-            if tenant:
+            client_id = os.getenv("AZURE_CLIENT_ID")
+            client_secret = os.getenv("AZURE_CLIENT_SECRET")
+            if client_id and client_secret and tenant:
+                # Service principal — for containers / CI where there's no
+                # `az login`. (DefaultAzureCredential would also find these via
+                # EnvironmentCredential, but the tenant branch below would grab
+                # control first, so we handle it explicitly.) In Azure proper,
+                # leave these unset and the else-branch uses Managed Identity.
+                from azure.identity import ClientSecretCredential
+
+                credential = ClientSecretCredential(tenant, client_id, client_secret)
+            elif tenant:
                 from azure.identity import AzureCliCredential
 
                 credential = AzureCliCredential(tenant_id=tenant)

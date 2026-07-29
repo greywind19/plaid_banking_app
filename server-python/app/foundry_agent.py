@@ -51,6 +51,13 @@ def _credential():
     from azure.identity import AzureCliCredential, DefaultAzureCredential
 
     tenant = os.getenv("AZURE_TENANT_ID")
+    client_id = os.getenv("AZURE_CLIENT_ID")
+    client_secret = os.getenv("AZURE_CLIENT_SECRET")
+    if client_id and client_secret and tenant:
+        # Service principal — containers / CI (no `az login` available).
+        from azure.identity import ClientSecretCredential
+
+        return ClientSecretCredential(tenant, client_id, client_secret)
     if tenant:
         return AzureCliCredential(tenant_id=tenant)
     return DefaultAzureCredential()

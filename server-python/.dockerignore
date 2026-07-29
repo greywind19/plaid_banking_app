@@ -1,0 +1,10 @@
+# Keep the build context small and secrets out of the image.
+.venv
+__pycache__
+**/__pycache__
+*.pyc
+.env
+.env.*
+!.env.example
+README.md
+_pg_demo.py
