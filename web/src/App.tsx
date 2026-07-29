@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   api,
   money,
   type Account,
   type CategorySpend,
+  type ChatMessage,
   type NetWorth,
   type Txn,
 } from "./api.js";
@@ -17,6 +18,41 @@ export function App() {
   const [txns, setTxns] = useState<Txn[]>([]);
   const [spending, setSpending] = useState<{ totalSpend: number; categories: CategorySpend[] } | null>(null);
   const [nw, setNw] = useState<NetWorth | null>(null);
+
+  // --- AI chat state ---
+  const [chat, setChat] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState("");
+  const [chatBusy, setChatBusy] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const chatEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chat, chatBusy]);
+
+  async function sendChat(e?: React.FormEvent) {
+    e?.preventDefault();
+    const text = input.trim();
+    if (!text || chatBusy) return;
+    setChatError(null);
+    const next = [...chat, { role: "user", content: text }];
+    setChat(next);
+    setInput("");
+    setChatBusy(true);
+    try {
+      const res = await api.chat(next);
+      setChat(res.messages);
+    } catch (err: any) {
+      setChatError(err.message ?? "Chat failed");
+      setChat(chat); // roll back the optimistic user message on failure
+    } finally {
+      setChatBusy(false);
+    }
+  }
+
+  const visibleChat = chat.filter(
+    (m) => (m.role === "user" || m.role === "assistant") && m.content
+  );
 
   useEffect(() => {
     api.health().then((h) => setLinked(h.linked)).catch(() => {});
@@ -195,6 +231,50 @@ export function App() {
               </table>
             </section>
           </div>
+
+          <section className="chat">
+            <h2>💬 Ask Banking Copilot</h2>
+            <p className="muted small">
+              Powered by Azure AI Foundry · answers are grounded in your real
+              account data via tool calls.
+            </p>
+            <div className="chat-log">
+              {visibleChat.length === 0 && !chatBusy && (
+                <div className="chat-hint muted">
+                  Try: “How much did I spend this month?”, “What’s my net worth?”,
+                  or “How much on dining?”
+                </div>
+              )}
+              {visibleChat.map((m, i) => (
+                <div key={i} className={`chat-msg ${m.role}`}>
+                  <span className="chat-role">
+                    {m.role === "user" ? "You" : "Copilot"}
+                  </span>
+                  <div className="chat-bubble">{m.content}</div>
+                </div>
+              ))}
+              {chatBusy && (
+                <div className="chat-msg assistant">
+                  <span className="chat-role">Copilot</span>
+                  <div className="chat-bubble typing">thinking…</div>
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+            {chatError && <div className="error">⚠️ {chatError}</div>}
+            <form className="chat-input" onSubmit={sendChat}>
+              <input
+                type="text"
+                placeholder="Ask about your spending, accounts, or net worth…"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                disabled={chatBusy}
+              />
+              <button className="primary" type="submit" disabled={chatBusy || !input.trim()}>
+                Send
+              </button>
+            </form>
+          </section>
         </>
       )}
     </div>

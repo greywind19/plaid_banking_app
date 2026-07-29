@@ -4,9 +4,12 @@ import os
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from dotenv import load_dotenv
 
 from . import service
+from .agent import run_agent
+from .llm_client import LLMConfigError, get_llm
 from .token_store import token_store
 
 load_dotenv()
@@ -107,6 +110,33 @@ def spending(
 @app.get("/api/net-worth")
 def net_worth():
     return service.net_worth()
+
+
+class ChatRequest(BaseModel):
+    # Opaque chat history: {role, content, ...}. list[dict] preserves the
+    # tool_calls / tool_call_id fields the agent round-trips between turns.
+    messages: list[dict] = []
+
+
+@app.post("/api/chat")
+def chat(body: ChatRequest):
+    """Run one agent turn: LLM + tool calls over the linked Plaid data.
+
+    The client sends the full prior history plus its new user message and gets
+    back the assistant's answer plus the updated history to send next time.
+    """
+    # The agent's tools read live data, so make sure the sandbox is linked.
+    if not token_store.is_linked():
+        service.connect_sandbox()
+
+    # Fail clearly (not a bare 500) if the LLM isn't configured yet.
+    try:
+        get_llm()
+    except LLMConfigError as e:
+        return JSONResponse(status_code=503, content={"error": str(e)})
+
+    answer, messages = run_agent(body.messages)
+    return {"answer": answer, "messages": messages}
 
 
 def main():

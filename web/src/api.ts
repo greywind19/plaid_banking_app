@@ -46,6 +46,12 @@ export interface NetWorth {
   }[];
 }
 
+export interface ChatMessage {
+  role: string;
+  content?: string | null;
+  [k: string]: unknown;
+}
+
 async function req<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, init);
   const body = await res.json().catch(() => ({}));
@@ -79,6 +85,12 @@ export const api = {
     );
   },
   netWorth: () => req<NetWorth>("/api/net-worth"),
+  chat: (messages: ChatMessage[]) =>
+    req<{ answer: string; messages: ChatMessage[] }>("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages }),
+    }),
 };
 
 export function money(n: number | null, currency = "USD"): string {
