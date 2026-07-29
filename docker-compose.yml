@@ -44,6 +44,10 @@ services:
     build: ./web
     depends_on:
       - server
+    environment:
+      # Injected into nginx.conf.template at container start (envsubst). Locally
+      # this points at the server service; in ACA it's the internal HTTPS FQDN.
+      API_UPSTREAM: http://server:8787
     ports:
       # Open the app at http://localhost:8080
       - "8080:80"

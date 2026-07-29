@@ -1,0 +1,35 @@
+server {
+    listen 80;
+    server_name _;
+
+    # Serve the built React static files.
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # ---- Reverse-proxy the API ------------------------------------------
+    # The React app calls fetch("/api/..."). nginx forwards those to the API
+    # server. The upstream address is injected at container start from the
+    # ${API_UPSTREAM} env var (nginx:alpine runs envsubst on this template):
+    #   * local docker-compose : http://server:8787
+    #   * Azure Container Apps  : https://<server>.internal.<env>.azurecontainerapps.io
+    #
+    # $proxy_host = the host:port parsed from API_UPSTREAM, so the Host header
+    # (and TLS SNI, via proxy_ssl_server_name) automatically match the upstream
+    # — which is exactly what ACA's internal ingress needs for routing.
+    location /api/ {
+        proxy_pass            ${API_UPSTREAM};
+        proxy_http_version    1.1;
+        proxy_ssl_server_name on;
+        proxy_set_header      Host              $proxy_host;
+        proxy_set_header      X-Real-IP         $remote_addr;
+        proxy_set_header      X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header      X-Forwarded-Proto $scheme;
+    }
+    # ---------------------------------------------------------------------
+
+    # SPA fallback: any non-file route returns index.html so client-side
+    # routing works (React handles the path in the browser).
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

@@ -1,0 +1,13 @@
+# Terraform — local state, provider plugins, crash logs, and any *.tfvars that
+# may contain secrets. Only *.example templates are committed.
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Secret var files — never commit real values.
+secrets.auto.tfvars
+*.auto.tfvars
+!*.auto.tfvars.example

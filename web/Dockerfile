@@ -17,8 +17,11 @@ RUN npm run build
 # ---- Stage 2: serve ----
 FROM nginx:alpine
 
-# Our reverse-proxy + SPA-fallback config replaces the default.
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Our config is a TEMPLATE: nginx:alpine's entrypoint runs envsubst on files in
+# /etc/nginx/templates/*.template at container start, writing the result to
+# /etc/nginx/conf.d/. This injects ${API_UPSTREAM} (set per-environment) so the
+# same image works locally (http://server:8787) and in ACA (internal HTTPS FQDN).
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 
 # Copy ONLY the built static files from stage 1.
 COPY --from=build /app/dist /usr/share/nginx/html

@@ -322,6 +322,79 @@ _(entries appended as we complete each step)_
 
 ---
 
+## Stage 7 — deploy to Azure Container Apps with Terraform (2026-07-29)
+
+**Goal:** take the exact same images from Stage 6 and run them in Azure
+Container Apps (ACA), provisioned entirely by Terraform, with **keyless
+Managed Identity auth to Foundry** — no secrets, no code changes.
+
+### Infra as code (Terraform, `infra/`)
+- `infra/modules/` — reusable modules, portable to AKS later:
+  - `acr/` — Azure Container Registry (Basic, admin disabled).
+  - `identity/` — user-assigned Managed Identity + 3 role assignments:
+    `AcrPull` (pull images), `Cognitive Services OpenAI User` (inference),
+    `Foundry User` (agents data plane) — the same two Foundry roles the local
+    SP had, now bound to the MI.
+  - `postgres/` — PostgreSQL Flexible Server (B1ms, v16) + `banking` DB +
+    `AllowAzureServices` firewall rule. Outputs a sensitive `database_url`.
+- `infra/aca/` — the compute layer: RG `rg-banking-copilot-aca`, ACA
+  environment, and two container apps:
+  - `banking-server` — **internal ingress only** (`external_enabled = false`),
+    port 8787, MI attached. Secrets: database-url, plaid creds. The only auth
+    env it gets is `AZURE_CLIENT_ID` = the MI's client id → the Stage 6
+    credential ladder falls through to `DefaultAzureCredential`, which selects
+    that user-assigned MI. **Zero secrets for Azure, zero code change.**
+  - `banking-ui` — **public ingress** (`external_enabled = true`), port 80,
+    nginx. `API_UPSTREAM = https://<server-internal-fqdn>`.
+
+### nginx made portable
+- Renamed `web/nginx.conf` → `web/nginx.conf.template` with `${API_UPSTREAM}`.
+  `nginx:alpine` auto-runs envsubst on `/etc/nginx/templates/*.template` at
+  boot. Locally that resolves to `http://server:8787`; in ACA to the internal
+  HTTPS FQDN (template uses `$proxy_host` + `proxy_ssl_server_name on` so the
+  Host header/SNI match ACA's internal ingress). Same image, both worlds.
+
+### Reused existing infra (didn't create duplicates)
+- Log Analytics: `data` source referencing the existing **FPlogs01**
+  (`RG_Monitoring`) — Terraform reads it, never manages/deletes it.
+
+### Deploy — the 4-phase runbook (chicken-and-egg: apps need images, images
+need ACR)
+1. `terraform apply "-target=azurerm_resource_group.this" "-target=module.acr"`
+   → RG + ACR only. **PowerShell gotcha:** `-target` args MUST be quoted or
+   PowerShell mangles them ("Too many command line arguments").
+2. `az acr build --registry acrbankingbcaca1 --image banking-server:v1
+   ./server-python` and `... banking-ui:v1 ./web` — cloud build, no local
+   docker push. **Gotcha:** the Windows Azure CLI log streamer crashes with a
+   `cp1252 'charmap' codec` UnicodeEncodeError — but **the build runs
+   server-side regardless**; verify with `az acr repository show-tags` /
+   `az acr task list-runs`, or use `--no-wait` and poll.
+3. `terraform apply` (full) — Postgres is the slow one (~4 min), everything
+   else seconds. 10 resources added.
+4. Verify: `curl <ui_url>/api/health` → `{"ok":true,"linked":false}`, then
+   `POST /api/chat {"messages":[{"role":"user","content":"…"}]}`.
+
+### Result — live and verified
+- Public URL:
+  `https://banking-ui.proudsky-35a5a9f8.canadacentral.azurecontainerapps.io`
+- `/api/health` → `{"ok":true,"linked":false}` (UI → nginx → internal server).
+- `/api/chat` → real agent answer ("check balances, review transactions,
+  summarize spending, calculate net worth") — proving the **full keyless
+  chain in the cloud**: public UI → nginx → internal server → Managed Identity
+  → `DefaultAzureCredential` → Foundry/LLM → tools → Postgres.
+- The MI payoff confirmed: the first empty-body test reached Foundry and was
+  rejected by *Foundry* (not a 401/403), i.e. the MI had already authenticated.
+
+### Cost / teardown
+- ~$17-20/mo if left running (Postgres B1ms always-on ~$12-15 is the driver;
+  ACR Basic ~$5; ACA scales to zero when idle). `terraform destroy` stops
+  billing — FPlogs01 is untouched (data source, not managed).
+
+- _next: append merge note after PR; mirror to personal repo via
+  `sync-to-personal.ps1` once Stage 7 lands on main._
+
+---
+
 ## Backlog / future stages
 
 - **Level 2 — Foundry tracing:** connect App Insights to the project → portal
