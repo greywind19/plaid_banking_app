@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 
 from . import service
-from .agent import run_agent
+from .brain import run_brain
 from .llm_client import LLMConfigError, get_llm
 from .token_store import token_store
 
@@ -135,7 +135,7 @@ def chat(body: ChatRequest):
     except LLMConfigError as e:
         return JSONResponse(status_code=503, content={"error": str(e)})
 
-    answer, messages = run_agent(body.messages)
+    answer, messages = run_brain(body.messages)
     return {"answer": answer, "messages": messages}
 
 

@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 load_dotenv()  # read .env before importing modules that read the environment
 
 from . import service            # noqa: E402
-from .agent import run_agent     # noqa: E402
+from .brain import run_brain, active_backend  # noqa: E402
 from .llm_client import LLMConfigError, get_llm  # noqa: E402
 from .token_store import token_store  # noqa: E402
 
@@ -33,7 +33,7 @@ def main() -> None:
     except LLMConfigError as e:
         print(f"LLM not configured:\n  {e}")
         return
-    print(f"Banking Copilot — model: {model}")
+    print(f"Banking Copilot — model: {model} · backend: {active_backend()}")
 
     _ensure_linked()
     print("Ask about your accounts, spending, or net worth. Type 'exit' to quit.\n")
@@ -52,7 +52,7 @@ def main() -> None:
 
         history.append({"role": "user", "content": user})
         try:
-            answer, history = run_agent(history)
+            answer, history = run_brain(history)
         except Exception as e:
             print(f"  [error] {e}\n")
             history.pop()  # drop the failed turn so the session can continue
