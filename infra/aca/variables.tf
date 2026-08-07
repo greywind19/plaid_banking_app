@@ -80,6 +80,19 @@ variable "agent_backend" {
 }
 
 # ============================================================================
+# Stage 7.5 — APIM publisher metadata (required on every APIM instance)
+# ============================================================================
+variable "apim_publisher_name" {
+  type    = string
+  default = "Banking Copilot Lab"
+}
+
+variable "apim_publisher_email" {
+  type    = string
+  default = "amansahota@fargopost.com"
+}
+
+# ============================================================================
 # Images (filled after we push to ACR — build-push-images step)
 # ============================================================================
 variable "server_image_tag" {

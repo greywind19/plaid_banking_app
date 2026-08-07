@@ -49,6 +49,19 @@ module "postgres" {
   tags                   = var.tags
 }
 
+# ---- Stage 7.5: APIM AI Gateway (Consumption) -----------------------------
+# Provisions the APIM instance + system MI only. The AOAI backend, imported
+# API, and governance policies are layered on in later Stage 7.5 steps.
+module "apim" {
+  source              = "../modules/apim"
+  name                = "apim-banking-${var.name_suffix}"
+  resource_group_name = azurerm_resource_group.this.name
+  location            = azurerm_resource_group.this.location
+  publisher_name      = var.apim_publisher_name
+  publisher_email     = var.apim_publisher_email
+  tags                = var.tags
+}
+
 # ---- Container Apps Environment (the managed, hidden-K8s host) --------------
 resource "azurerm_container_app_environment" "this" {
   name                       = "cae-banking-copilot"

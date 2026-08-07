@@ -24,3 +24,18 @@ output "postgres_fqdn" {
 output "managed_identity_client_id" {
   value = module.identity.client_id
 }
+
+# ---- Stage 7.5: APIM -------------------------------------------------------
+output "apim_name" {
+  value = module.apim.name
+}
+
+output "apim_gateway_url" {
+  description = "APIM gateway base URL. Step 2 points the server's AZURE_OPENAI_ENDPOINT here."
+  value       = module.apim.gateway_url
+}
+
+output "apim_principal_id" {
+  description = "APIM system MI principal — grant Cognitive Services User on Foundry in Step 2."
+  value       = module.apim.principal_id
+}

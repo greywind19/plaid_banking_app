@@ -395,6 +395,63 @@ need ACR)
 
 ---
 
+## Stage 7.5 — APIM AI Gateway (in progress: Steps 1–2)
+
+Goal: put Azure API Management in front of Foundry as an **AI Gateway** to learn
+auth + rate limiting. SKU = **Consumption** (~$0 idle, scales to zero, all
+policies supported). Full design (incl. the parked human-auth phases) lives in
+the session plan; this entry records what is BUILT and LIVE so far.
+
+### The architectural fork (why `local`, not `foundry`)
+APIM AI-Gateway policies (token-limit, emit-token-metric, semantic cache) only
+work on the **standard chat-completions API** — i.e. the `local` backend
+(`llm_client.py` → AzureOpenAI). The `foundry` backend calls the model
+server-side inside Foundry Agent Service, so APIM can't intercept those tokens.
+So to exercise the gateway we run `AGENT_BACKEND=local` (same gpt-5.4-mini
+deployment, reached via chat-completions).
+
+### Step 1 — Provision (DONE)
+- New reusable module `infra/modules/apim` (instance + system-assigned MI),
+  wired into the `aca` stack. `terraform apply -target=module.apim` → created
+  `apim-banking-bcaca1` in ~2 min.
+- Gateway: `https://apim-banking-bcaca1.azure-api.net`
+- APIM system MI principal: `bf26e880-...`
+
+### Step 2 — Keyless AI backend gateway (DONE, verified live)
+CLI-first (to learn), to be codified in Terraform later:
+1. Granted APIM's MI **Cognitive Services User** on `plaid-app-testing-resource`
+   → authorises keyless data-plane calls.
+2. `az apim api import` of the Azure OpenAI OpenAPI spec at path `/openai`,
+   service-url = the Foundry `/openai` endpoint, `subscription-required=false`
+   (TEMPORARY — client auth is a later step).
+3. API policy `authentication-managed-identity` (resource
+   `https://cognitiveservices.azure.com`) → APIM injects its own MI token per
+   call; any client credential is overwritten.
+4. Repointed the server via `az containerapp update`:
+   `AZURE_OPENAI_ENDPOINT=https://apim-banking-bcaca1.azure-api.net` +
+   `AGENT_BACKEND=local`. **No app code change** (keyless path already sends an
+   AAD token that APIM overwrites).
+- Verified: (a) raw no-auth `curl` to the gateway returned a completion
+  (`"gateway works"`), proving keyless MI→AOAI; (b) full app chat through the
+  UI returned `"net worth is $22,360.20"` — the whole tool-loop now flows
+  `banking-server → APIM → (keyless MI) → gpt-5.4-mini`.
+
+### Windows gotchas hit
+- `az rest` PUT of policy XML crashes on cp1252 + a BOM in ARM's response — used
+  PowerShell `Invoke-RestMethod` with a bearer token instead.
+- Build the JSON body BOM-free (`UTF8Encoding($false)`), and strip a leading BOM
+  from the XML before wrapping.
+
+### Known loose ends (tracked for later)
+- APIM API is still **open** (`subscription-required=false`) — closed when the
+  user-auth work resumes.
+- The server repoint was done via CLI, **not yet in Terraform** → reconcile
+  `agent_backend` + `azure_openai_endpoint` in tfvars when codifying.
+- Remaining Stage 7.5 (token metrics, human auth via Easy Auth + APIM
+  validate-jwt, tiered throttling) is **backlogged** in the session plan.
+
+---
+
 ## Backlog / future stages
 
 - **Level 2 — Foundry tracing:** connect App Insights to the project → portal
