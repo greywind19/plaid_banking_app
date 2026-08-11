@@ -93,6 +93,24 @@ variable "apim_publisher_email" {
 }
 
 # ============================================================================
+# Stage 7.5 — Easy Auth (banking-ui login)
+# The Entra app registration is created OUT-OF-BAND (portal Easy Auth wizard or
+# a directory admin) because ARM "Owner" can't write Entra objects. Terraform
+# consumes its client id (non-secret → terraform.tfvars) and client secret
+# (sensitive → gitignored secrets.auto.tfvars). See auth.tf for the full why.
+# ============================================================================
+variable "easyauth_client_id" {
+  type        = string
+  description = "Client (application) id of the Entra app registration behind banking-ui Easy Auth."
+}
+
+variable "easyauth_client_secret" {
+  type        = string
+  sensitive   = true
+  description = "Client secret for the Easy Auth app registration. Provide via secrets.auto.tfvars."
+}
+
+# ============================================================================
 # Images (filled after we push to ACR — build-push-images step)
 # ============================================================================
 variable "server_image_tag" {

@@ -39,3 +39,10 @@ output "apim_principal_id" {
   description = "APIM system MI principal — grant Cognitive Services User on Foundry in Step 2."
   value       = module.apim.principal_id
 }
+
+# ---- Stage 7.5: Easy Auth --------------------------------------------------
+output "auth_app_client_id" {
+  description = "Entra app registration (client) id behind banking-ui Easy Auth."
+  value       = var.easyauth_client_id
+}
+

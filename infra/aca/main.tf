@@ -206,6 +206,15 @@ resource "azurerm_container_app" "ui" {
     identity_ids = [module.identity.id]
   }
 
+  # Easy Auth reads the app-registration client secret from this container app
+  # secret (referenced by name in authConfigs — see auth.tf). Value comes from a
+  # gitignored var (secrets.auto.tfvars) — the app registration is managed
+  # out-of-band, so Terraform just consumes its secret here.
+  secret {
+    name  = "microsoft-provider-authentication-secret"
+    value = var.easyauth_client_secret
+  }
+
   registry {
     server   = module.acr.login_server
     identity = module.identity.id

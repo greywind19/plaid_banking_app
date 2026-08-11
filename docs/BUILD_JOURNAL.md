@@ -442,13 +442,70 @@ CLI-first (to learn), to be codified in Terraform later:
 - Build the JSON body BOM-free (`UTF8Encoding($false)`), and strip a leading BOM
   from the XML before wrapping.
 
+### Step 3 — User login via Easy Auth (DONE, verified live)
+Part B, Phase 1: put a login wall in front of `banking-ui` with **zero app
+code** using ACA **Built-in Authentication (Easy Auth)**.
+- Portal flow (Container App → Authentication → Add identity provider →
+  **Microsoft**) auto-created the Entra **app registration**
+  (`banking-copilot-auth`, client id `ec9453bd-...`), generated + stored the
+  client secret, and wired the redirect URI
+  `.../.auth/login/aad/callback`. This collapsed both `auth-entra-appreg` +
+  `auth-easyauth-ui` into one wizard.
+- Settings: **single-tenant** (Fargo Post `bcea32b2-...` only), **Require
+  authentication**, unauthenticated → **302 redirect to login**, token store
+  **on**. Delegated perms = `openid profile email` + `offline_access` (the
+  `User.Read`-equivalent for login) — admin-consented org-wide.
+- Verified: incognito hit to the UI → redirected to the Microsoft sign-in page
+  → consent → landed logged-in; chat still works end-to-end; `/.auth/me`
+  returns identity claims (`oid`, `preferred_username`). Logout via
+  `/.auth/logout`.
+
+**What this does NOT cover yet:** login guards the **UI only**.
+`banking-server` (and thus the AI hop) is still independently reachable — that
+gap is closed by `apim-expose-server` + `apim-validate-jwt`. Tiers (Free/Pro)
+are App Roles added later; login just proves identity.
+
+### Step 3.5 — Codify Easy Auth in Terraform (DONE)
+Adopted the portal-created auth into IaC (Option A: import/adopt, no re-consent).
+Hit a real-world lesson worth recording:
+
+- **ARM "Owner" ≠ Entra directory rights.** Terraform tried to manage the Entra
+  **app registration** (`azuread_application` + create a client secret) and got
+  `403 Authorization_RequestDenied` from Graph. Adding an app *owner* also 403'd.
+  Subscription Owner is ARM RBAC; writing app registrations needs a **directory
+  role** (e.g. Application Administrator). The portal's Easy Auth wizard succeeds
+  only because it runs an elevated auto-provision flow on your behalf.
+- **Resolution — split the ownership boundary:**
+  - The **app registration is an out-of-band prerequisite** (portal wizard or a
+    directory admin). Terraform consumes it via vars: `easyauth_client_id`
+    (non-secret → `terraform.tfvars`) and `easyauth_client_secret` (sensitive →
+    gitignored `secrets.auto.tfvars`, seeded from the existing container-app
+    secret).
+  - Terraform **fully owns the ARM side**: the `banking-ui` container-app secret
+    + the `authConfigs/current` sub-resource, managed with the **`azapi`**
+    provider (azurerm's `azurerm_container_app` has no auth block).
+- **Also reconciled the Step 2 drift** in the same pass: `agent_backend = "local"`
+  and `azure_openai_endpoint = <APIM gateway>` are now in `terraform.tfvars`.
+- **Cycle gotcha:** the app's redirect URI and the ui's client secret reference
+  each other. Broke it by building the redirect URI from the environment's
+  `default_domain` + the static app name instead of the ui resource.
+- Result: `terraform apply` → **0 add, 2 change, 0 destroy**; unauthenticated
+  request still `302`s to Microsoft login with the same app id `ec9453bd` (login
+  uninterrupted). New files: `infra/aca/auth.tf`; providers gain `azapi`.
+- **Fork/redeploy note:** a fresh deploy stands up its own app registration
+  (portal or admin), sets the two vars, and Terraform wires the ARM side. One
+  unavoidable manual step remains: a **one-time admin consent** after apply
+  (Entra can't automate consent).
+
 ### Known loose ends (tracked for later)
 - APIM API is still **open** (`subscription-required=false`) — closed when the
   user-auth work resumes.
-- The server repoint was done via CLI, **not yet in Terraform** → reconcile
-  `agent_backend` + `azure_openai_endpoint` in tfvars when codifying.
-- Remaining Stage 7.5 (token metrics, human auth via Easy Auth + APIM
-  validate-jwt, tiered throttling) is **backlogged** in the session plan.
+- `banking-server` / AI hop not yet behind user auth → `apim-expose-server` +
+  `apim-validate-jwt`.
+- APIM API import + `authentication-managed-identity` policy are still **CLI-only**
+  (not in Terraform) → codify in the `apim-document` step.
+- Remaining Stage 7.5 (token metrics, APIM validate-jwt, tiered throttling) is
+  **backlogged** in the session plan.
 
 ---
 

@@ -6,6 +6,13 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 3.100"
     }
+    # azapi — manages the Container App `authConfigs/current` sub-resource that
+    # turns on Easy Auth. azurerm's azurerm_container_app has no auth block, so
+    # we call the ARM API directly through azapi.
+    azapi = {
+      source  = "Azure/azapi"
+      version = "~> 1.12"
+    }
   }
 
   # ---- STATE BACKEND -------------------------------------------------------
@@ -30,3 +37,7 @@ provider "azurerm" {
   # hassle). Overridable via var if you ever retarget.
   subscription_id = var.subscription_id
 }
+
+# Both new providers authenticate the same way as azurerm (Azure CLI creds by
+# default), so no extra config is needed.
+provider "azapi" {}
